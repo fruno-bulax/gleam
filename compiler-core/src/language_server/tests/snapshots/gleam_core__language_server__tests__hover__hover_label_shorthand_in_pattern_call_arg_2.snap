@@ -6,7 +6,7 @@ pub type Wibble { Wibble(arg1: Int, arg2: Bool) }
 
 pub fn main() {
   let Wibble(arg2:, ..) = todo
-             ▔↑▔▔▔            
+             ▔↑▔▔             
 }
 
 

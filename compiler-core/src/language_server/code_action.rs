@@ -5954,9 +5954,8 @@ impl<'a> InlineVariable<'a> {
             VariableReferenceKind::Variable => {
                 self.edits.replace(reference.location, value.into());
             }
-            VariableReferenceKind::LabelShorthand => {
-                self.edits
-                    .insert(reference.location.end, format!(" {value}"));
+            VariableReferenceKind::LabelShorthand { arg_end } => {
+                self.edits.insert(arg_end, format!(" {value}"));
             }
         }
 

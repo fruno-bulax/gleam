@@ -8,7 +8,7 @@ fn main() {
   let arg1 = 1
   let arg2 = True
   wibble(arg2:, arg1:)
-         ↑▔▔▔▔        
+         ↑▔▔▔         
 }
 
 

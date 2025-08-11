@@ -1922,7 +1922,7 @@ where
     ) -> Result<Option<CallArg<UntypedPattern>>, ParseError> {
         match (self.tok0.take(), self.tok1.take()) {
             // named arg
-            (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
+            (Some((start, Token::Name { name }, name_end)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
                 match self.parse_pattern(position)? {
@@ -1943,11 +1943,17 @@ where
                             label: Some(name.clone()),
                             value: UntypedPattern::Variable {
                                 origin: VariableOrigin {
-                                    syntax: VariableSyntax::LabelShorthand(name.clone()),
+                                    syntax: VariableSyntax::LabelShorthand {
+                                        label: name.clone(),
+                                        arg_end: end,
+                                    },
                                     declaration: position.to_declaration(),
                                 },
                                 name,
-                                location: SrcSpan { start, end },
+                                location: SrcSpan {
+                                    start,
+                                    end: name_end,
+                                },
                                 type_: (),
                             },
                         }))
@@ -1976,7 +1982,7 @@ where
     //   a:
     fn parse_record_update_arg(&mut self) -> Result<Option<UntypedRecordUpdateArg>, ParseError> {
         match self.maybe_name() {
-            Some((start, label, _)) => {
+            Some((start, label, name_end)) => {
                 let (_, end) = self.expect_one(&Token::Colon)?;
                 let value = self.parse_expression()?;
                 match value {
@@ -1995,7 +2001,10 @@ where
                             location: SrcSpan { start, end },
                             value: UntypedExpr::Var {
                                 name: label,
-                                location: SrcSpan { start, end },
+                                location: SrcSpan {
+                                    start,
+                                    end: name_end,
+                                },
                             },
                         }))
                     }
@@ -2279,10 +2288,10 @@ where
     //   a: expr
     fn parse_fn_argument(&mut self) -> Result<Option<ParserArg>, ParseError> {
         let label = match (self.tok0.take(), self.tok1.take()) {
-            (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
+            (Some((start, Token::Name { name }, name_end)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
-                Some((start, name, end))
+                Some((start, name, name_end, end))
             }
             (t0, t1) => {
                 self.tok0 = t0;
@@ -2294,7 +2303,7 @@ where
         match self.parse_expression()? {
             Some(value) => {
                 let arg = match label {
-                    Some((start, label, _)) => CallArg {
+                    Some((start, label, _, _)) => CallArg {
                         implicit: None,
                         label: Some(label),
                         location: SrcSpan {
@@ -2316,7 +2325,7 @@ where
                 match self.maybe_discard_name() {
                     Some((name_start, name, name_end)) => {
                         let arg = match label {
-                            Some((label_start, label, _)) => ParserArg::Hole {
+                            Some((label_start, label, _, _)) => ParserArg::Hole {
                                 label: Some(label),
                                 arg_location: SrcSpan {
                                     start: label_start,
@@ -2346,7 +2355,7 @@ where
                     }
                     _ => {
                         match label {
-                            Some((start, label, end)) => {
+                            Some((start, label, name_end, end)) => {
                                 // Argument supplied with a label shorthand.
                                 Ok(Some(ParserArg::Arg(Box::new(CallArg {
                                     implicit: None,
@@ -2354,7 +2363,10 @@ where
                                     location: SrcSpan { start, end },
                                     value: UntypedExpr::Var {
                                         name: label,
-                                        location: SrcSpan { start, end },
+                                        location: SrcSpan {
+                                            start,
+                                            end: name_end,
+                                        },
                                     },
                                 }))))
                             }

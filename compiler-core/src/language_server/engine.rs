@@ -644,7 +644,7 @@ where
                     Some(
                         VariableSyntax::Variable { .. }
                         | VariableSyntax::AssignmentPattern
-                        | VariableSyntax::LabelShorthand(_),
+                        | VariableSyntax::LabelShorthand { .. },
                     )
                     | None => success_response(location),
                 },
@@ -700,8 +700,8 @@ where
                 }) => {
                     let rename_kind = match origin.map(|origin| origin.syntax) {
                         Some(VariableSyntax::Generated) => return Ok(None),
-                        Some(VariableSyntax::LabelShorthand(_)) => {
-                            VariableReferenceKind::LabelShorthand
+                        Some(VariableSyntax::LabelShorthand { arg_end, .. }) => {
+                            VariableReferenceKind::LabelShorthand { arg_end }
                         }
                         Some(
                             VariableSyntax::AssignmentPattern | VariableSyntax::Variable { .. },
@@ -788,7 +788,7 @@ where
                 }) if location.contains(byte_index) => match origin.map(|origin| origin.syntax) {
                     Some(VariableSyntax::Generated) => None,
                     Some(
-                        VariableSyntax::LabelShorthand(_)
+                        VariableSyntax::LabelShorthand { .. }
                         | VariableSyntax::AssignmentPattern
                         | VariableSyntax::Variable { .. },
                     )

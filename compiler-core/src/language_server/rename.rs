@@ -60,8 +60,8 @@ pub fn rename_local_variable(
         VariableReferenceKind::Variable => {
             edits.replace(definition_location, params.new_name.clone())
         }
-        VariableReferenceKind::LabelShorthand => {
-            edits.insert(definition_location.end, format!(" {}", params.new_name))
+        VariableReferenceKind::LabelShorthand { arg_end } => {
+            edits.insert(arg_end, format!(" {}", params.new_name))
         }
     }
 
@@ -70,8 +70,8 @@ pub fn rename_local_variable(
             VariableReferenceKind::Variable => {
                 edits.replace(reference.location, params.new_name.clone())
             }
-            VariableReferenceKind::LabelShorthand => {
-                edits.insert(reference.location.end, format!(" {}", params.new_name))
+            VariableReferenceKind::LabelShorthand { arg_end } => {
+                edits.insert(arg_end, format!(" {}", params.new_name))
             }
         }
     }

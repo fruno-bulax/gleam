@@ -351,7 +351,7 @@ pub struct VariableReference {
 #[derive(Debug, Clone, Copy)]
 pub enum VariableReferenceKind {
     Variable,
-    LabelShorthand,
+    LabelShorthand { arg_end: u32 },
 }
 
 pub fn find_variable_references(
@@ -518,7 +518,9 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
                 {
                     self.references.push(VariableReference {
                         location: *location,
-                        kind: VariableReferenceKind::LabelShorthand,
+                        kind: VariableReferenceKind::LabelShorthand {
+                            arg_end: arg.location.end,
+                        },
                     });
                     return;
                 }

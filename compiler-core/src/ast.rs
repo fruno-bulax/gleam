@@ -1530,7 +1530,7 @@ where
 {
     #[must_use]
     pub fn uses_label_shorthand(&self) -> bool {
-        self.label.is_some() && self.location == self.value.location()
+        self.label.is_some() && self.location.start == self.value.location().start
     }
 }
 
@@ -1556,7 +1556,7 @@ pub struct UntypedRecordUpdateArg {
 impl UntypedRecordUpdateArg {
     #[must_use]
     pub fn uses_label_shorthand(&self) -> bool {
-        self.value.location() == self.location
+        self.value.location().start == self.location.start
     }
 }
 
