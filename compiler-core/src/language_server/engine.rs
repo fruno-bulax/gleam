@@ -2,7 +2,7 @@ use crate::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
-        self, Constant, CustomType, Definition, DefinitionLocation, ModuleConstant,
+        self, ClauseGuard, Constant, CustomType, Definition, DefinitionLocation, ModuleConstant,
         PatternUnusedArguments, SrcSpan, TypedArg, TypedConstant, TypedExpr, TypedFunction,
         TypedModule, TypedPattern,
     },
@@ -315,6 +315,13 @@ where
                     completions.append(&mut completer.completion_field_accessors(record.type_()));
                     Some(completions)
                 }
+                Located::ClauseGuard(ClauseGuard::FieldAccess { container, .. }) => {
+                    let mut completions = vec![];
+                    completions.append(&mut completer.completion_values());
+                    completions
+                        .append(&mut completer.completion_field_accessors(container.type_()));
+                    Some(completions)
+                }
                 Located::Expression {
                     position:
                         ExpressionPosition::ArgumentOrLabel {
@@ -330,7 +337,8 @@ where
                     );
                     Some(completions)
                 }
-                Located::Statement(_) | Located::Expression { .. } => {
+                // TODO: revisit, not sure if we need more clause guard completions
+                Located::Statement(_) | Located::Expression { .. } | Located::ClauseGuard(_) => {
                     Some(completer.completion_values())
                 }
                 Located::ModuleStatement(Definition::Function(_)) => {
@@ -989,6 +997,9 @@ Unused labelled fields:
                     module,
                     &this.hex_deps,
                 )),
+                // TODO: The AST does not currently contain enough information to easily
+                // include documentation or similar
+                Located::ClauseGuard(_) => None,
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines, module)),
                 Located::FunctionBody(_) => None,
                 Located::Annotation { ast, type_ } => {

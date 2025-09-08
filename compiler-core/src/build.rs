@@ -17,8 +17,8 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedConstant,
-    TypedDefinition, TypedExpr, TypedFunction, TypedPattern, TypedRecordConstructor,
+    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedClauseGuard,
+    TypedConstant, TypedDefinition, TypedExpr, TypedFunction, TypedPattern, TypedRecordConstructor,
     TypedStatement,
 };
 use crate::type_::{Type, TypedCallArg};
@@ -374,6 +374,7 @@ pub enum Located<'a> {
         layer: ast::Layer,
     },
     Constant(&'a TypedConstant),
+    ClauseGuard(&'a TypedClauseGuard),
 }
 
 impl<'a> Located<'a> {
@@ -437,6 +438,7 @@ impl<'a> Located<'a> {
                 span: SrcSpan::new(0, 0),
             }),
             Self::Constant(constant) => constant.definition_location(),
+            Self::ClauseGuard(guard) => guard.definition_location(),
         }
     }
 
@@ -455,6 +457,7 @@ impl<'a> Located<'a> {
             Located::FunctionBody(function) => None,
             Located::UnqualifiedImport(unqualified_import) => None,
             Located::ModuleName { .. } => None,
+            Located::ClauseGuard(guard) => Some(guard.type_()),
         }
     }
 

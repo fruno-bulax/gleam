@@ -1623,6 +1623,7 @@ impl TypedClause {
                     .flat_map(|p| p.iter())
                     .find_map(|p| p.find_node(byte_index))
             })
+            .or_else(|| self.guard.as_ref().and_then(|g| g.find_node(byte_index)))
             .or_else(|| self.then.find_node(byte_index))
     }
 
@@ -2240,6 +2241,135 @@ impl TypedClauseGuard {
             | ClauseGuard::Or { left, right, .. } => left
                 .referenced_variables()
                 .union(right.referenced_variables()),
+        }
+    }
+
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
+            return None;
+        }
+
+        match self {
+            ClauseGuard::Var { .. } => Some(Located::ClauseGuard(self)),
+            // This variant is also used for unqualified constants (`import module.{constant}`),
+            // but the reference is not retained
+            ClauseGuard::Constant(constant) => constant.find_node(byte_index),
+
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. }
+            | ClauseGuard::GtInt { left, right, .. }
+            | ClauseGuard::GtEqInt { left, right, .. }
+            | ClauseGuard::LtInt { left, right, .. }
+            | ClauseGuard::LtEqInt { left, right, .. }
+            | ClauseGuard::GtFloat { left, right, .. }
+            | ClauseGuard::GtEqFloat { left, right, .. }
+            | ClauseGuard::LtFloat { left, right, .. }
+            | ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::AddInt { left, right, .. }
+            | ClauseGuard::AddFloat { left, right, .. }
+            | ClauseGuard::SubInt { left, right, .. }
+            | ClauseGuard::SubFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. }
+            | ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::DivInt { left, right, .. }
+            | ClauseGuard::DivFloat { left, right, .. }
+            | ClauseGuard::RemainderInt { left, right, .. }
+            | ClauseGuard::Or { left, right, .. }
+            | ClauseGuard::And { left, right, .. } => left
+                .find_node(byte_index)
+                .or_else(|| right.find_node(byte_index)),
+
+            ClauseGuard::Not {
+                expression: guard, ..
+            }
+            | ClauseGuard::Block { value: guard, .. }
+            | ClauseGuard::TupleIndex { tuple: guard, .. }
+            | ClauseGuard::FieldAccess {
+                container: guard, ..
+            } => guard
+                .find_node(byte_index)
+                .or_else(|| Some(Located::ClauseGuard(self))),
+
+            ClauseGuard::ModuleSelect {
+                location,
+                module_name,
+                module_alias,
+                ..
+            } => {
+                let mod_len = module_alias.len() as u32;
+                // We want to return 'ModuleSelect' only if hovering over the field, not the module
+                // Compare with implementation for `TypedExpr`
+                let field_span = SrcSpan {
+                    // + 1 to skip '.'
+                    start: location.start + mod_len + 1,
+                    end: location.end,
+                };
+
+                let module_span = SrcSpan::new(location.start, location.start + mod_len);
+
+                if field_span.contains(byte_index) {
+                    Some(Located::ClauseGuard(self))
+                } else if module_span.contains(byte_index) {
+                    Some(Located::ModuleName {
+                        location: module_span,
+                        name: module_name,
+                        layer: Layer::Value,
+                    })
+                } else {
+                    None
+                }
+            }
+        }
+    }
+
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
+        match self {
+            ClauseGuard::Block { .. }
+            | ClauseGuard::Equals { .. }
+            | ClauseGuard::NotEquals { .. }
+            | ClauseGuard::GtInt { .. }
+            | ClauseGuard::GtEqInt { .. }
+            | ClauseGuard::LtInt { .. }
+            | ClauseGuard::LtEqInt { .. }
+            | ClauseGuard::GtFloat { .. }
+            | ClauseGuard::GtEqFloat { .. }
+            | ClauseGuard::LtFloat { .. }
+            | ClauseGuard::LtEqFloat { .. }
+            | ClauseGuard::AddInt { .. }
+            | ClauseGuard::AddFloat { .. }
+            | ClauseGuard::SubInt { .. }
+            | ClauseGuard::SubFloat { .. }
+            | ClauseGuard::MultInt { .. }
+            | ClauseGuard::MultFloat { .. }
+            | ClauseGuard::DivInt { .. }
+            | ClauseGuard::DivFloat { .. }
+            | ClauseGuard::RemainderInt { .. }
+            | ClauseGuard::Or { .. }
+            | ClauseGuard::And { .. }
+            | ClauseGuard::Not { .. }
+            | ClauseGuard::TupleIndex { .. } => None,
+
+            // TODO: definition (implement with equivalent arm in TypedExpr)
+            ClauseGuard::FieldAccess { .. } => None,
+
+            ClauseGuard::Var {
+                definition_location,
+                ..
+            } => Some(DefinitionLocation {
+                module: None,
+                span: *definition_location,
+            }),
+
+            ClauseGuard::ModuleSelect {
+                module_name,
+                literal,
+                ..
+            } => Some(DefinitionLocation {
+                module: Some(module_name.clone()),
+                span: literal.location(),
+            }),
+
+            ClauseGuard::Constant(constant) => constant.definition_location(),
         }
     }
 }

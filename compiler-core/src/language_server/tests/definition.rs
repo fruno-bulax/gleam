@@ -893,3 +893,75 @@ fn warble(wibble: Wibble) {
         find_position_of("Wobble ->")
     );
 }
+
+#[test]
+fn goto_definition_from_clause_guard() {
+    assert_goto!(
+        "
+fn wibble(wobble: Int) {
+  case True {
+    _ if wobble < 100 -> 0
+    _ -> 1
+  }
+}
+",
+        find_position_of("wobble <")
+    );
+}
+
+#[test]
+fn goto_module_from_clause_guard() {
+    let src = "
+import module
+
+pub fn main() {
+  case Nil {
+    _ if module.constant == 2 -> Nil
+    _ -> Nil
+  }
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(src).add_module("module", "pub const constant = 2"),
+        find_position_of("module.constant")
+    );
+}
+
+#[test]
+fn goto_module_type_from_clause_guard() {
+    let src = "
+import module
+
+pub fn main(wibble: Wibble) {
+  case Nil {
+    _ if module.Wibble == wibble -> Nil
+    _ -> Nil
+  }
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(src).add_module("module", "pub type Wibble { Wibble }"),
+        find_position_of("module.Wibble")
+    );
+}
+
+#[test]
+fn goto_const_in_different_module_from_clause_guard() {
+    let src = "
+import module
+
+pub fn main() {
+  case Nil {
+    _ if module.constant == 2 -> Nil
+    _ -> Nil
+  }
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(src).add_module("module", "pub const constant = 2"),
+        find_position_of("constant")
+    );
+}
