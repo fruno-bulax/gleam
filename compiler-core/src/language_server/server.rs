@@ -155,7 +155,7 @@ where
         for (path, diagnostics) in diagnostics {
             let diagnostics = diagnostics
                 .into_iter()
-                .flat_map(diagnostic_to_lsp)
+                .map(diagnostic_to_lsp)
                 .collect::<Vec<_>>();
             let uri = path_to_uri(path);
 
@@ -547,12 +547,11 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
     initialise_params
 }
 
-fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
+fn diagnostic_to_lsp(diagnostic: Diagnostic) -> lsp::Diagnostic {
     let severity = match diagnostic.level {
         Level::Error => lsp::DiagnosticSeverity::ERROR,
         Level::Warning => lsp::DiagnosticSeverity::WARNING,
     };
-    let hint = diagnostic.hint;
     let mut text = diagnostic.title;
 
     if let Some(label) = diagnostic
@@ -570,6 +569,12 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     if !diagnostic.text.is_empty() {
         text.push_str("\n\n");
         text.push_str(&diagnostic.text);
+    }
+
+    if let Some(hint) = diagnostic.hint {
+        text.push_str("\n\n");
+        text.push_str("Hint: ");
+        text.push_str(&hint);
     }
 
     // TODO: Redesign the diagnostic type so that we can be sure there is always
@@ -603,7 +608,7 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         })
         .collect_vec();
 
-    let main = lsp::Diagnostic {
+    lsp::Diagnostic {
         range,
         severity: Some(severity),
         code: None,
@@ -617,18 +622,6 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         },
         tags: None,
         data: None,
-    };
-
-    match hint {
-        Some(hint) => {
-            let hint = lsp::Diagnostic {
-                severity: Some(lsp::DiagnosticSeverity::HINT),
-                message: hint,
-                ..main.clone()
-            };
-            vec![main, hint]
-        }
-        None => vec![main],
     }
 }
 
