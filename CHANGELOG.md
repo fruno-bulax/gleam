@@ -124,6 +124,10 @@
   used on tuples.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- As some editors cannot display multiple diagnostics in the same location,
+  hints are now included in the main diagnostic.
+  ([fruno](https://github.com/fruno-bulax/))
+
 - When renaming, if the new name is invalid, the language server will produce an
   error message instead of silently doing nothing.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
